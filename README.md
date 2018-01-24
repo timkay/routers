@@ -1,6 +1,6 @@
 # routers
 
-The web page http://timkay.com/routers/ scans the local subnet for routers and repeaters.
+The web page http://timkay.com/routers/ scans the local subnet for routers and repeaters. This scan helps you discover the IP address of repeaters, which are often invisible to network discovery tools such as traceroute.
 
 Currently it supports ASUS devices and is known to work with the following products:
 
