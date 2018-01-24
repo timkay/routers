@@ -1,0 +1,78 @@
+Your network IP is: <h1 id="list">-</h1>
+<p>
+  This page scans for ASUS routers on the local subnet. It could be easily extended to search for other brands as well.
+</p>
+ASUS routers:
+<h2 id="scan"></h1>
+
+<script
+  src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+  integrity="sha256-k2WSCIexGzOj3Euiig+TlR8gA0EmPjuc79OEeY5L45g="
+  crossorigin="anonymous"></script>
+
+<script>
+  function identify(i, ip) {
+    $('#' + i).html('<div style="display: inline-block; float: left; text-align: center;"><a target="_blank" href="http://' + ip + '/"><img height="200" align="absmiddle" src="http://' + ip + '/images/Model_product.png"></a><br/><a target="_blank" href="http://' + ip + '/">' + ip + '</a></div>');
+  }
+  function remove(i) {
+    $('#' + i).remove();
+  }
+  function probe(ip) {
+    for (let i = 1; i <= 254; i++) {
+      ip = ip.replace(/\.\d+$/, '.' + i)
+      $('#scan').append('<span id="' + i + '"><span class="probe" style="writing-mode: vertical-rl; font-size: xx-small;">&nbsp; &nbsp;' + ip + '</span><a href="http://' + ip + '"><img src="http://' + ip + '/images/favicon.png" onload="identify(' + i + ', ' + "'" + ip + "'" + ')" onerror="remove(' + i + ')"></a></span>');
+    }
+    //setTimeout(function () {$('.probe').hide();}, 5000);
+  }
+</script>
+
+<script>
+
+// NOTE: window.RTCPeerConnection is "not a constructor" in FF22/23
+var RTCPeerConnection = /*window.RTCPeerConnection ||*/ window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
+
+if (RTCPeerConnection) (function () {
+    var rtc = new RTCPeerConnection({iceServers:[]});
+    if (1 || window.mozRTCPeerConnection) {      // FF [and now Chrome!] needs a channel/stream to proceed
+        rtc.createDataChannel('', {reliable:false});
+    };
+    
+    rtc.onicecandidate = function (evt) {
+        // convert the candidate to SDP so we can run it through our general parser
+        // see https://twitter.com/lancestout/status/525796175425720320 for details
+        if (evt.candidate) grepSDP("a="+evt.candidate.candidate);
+    };
+    rtc.createOffer(function (offerDesc) {
+        grepSDP(offerDesc.sdp);
+        rtc.setLocalDescription(offerDesc);
+    }, function (e) { console.warn("offer failed", e); });
+    
+    
+    var addrs = Object.create(null);
+    addrs["0.0.0.0"] = false;
+    function updateDisplay(newAddr) {
+        if (newAddr in addrs) return;
+        else addrs[newAddr] = true;
+        probe(newAddr);
+        var displayAddrs = Object.keys(addrs).filter(function (k) { return addrs[k]; });
+        document.getElementById('list').textContent = displayAddrs.join(" or perhaps ") || "n/a";
+    }
+    
+    function grepSDP(sdp) {
+        var hosts = [];
+        sdp.split('\r\n').forEach(function (line) { // c.f. http://tools.ietf.org/html/rfc4566#page-39
+            if (~line.indexOf("a=candidate")) {     // http://tools.ietf.org/html/rfc4566#section-5.13
+                var parts = line.split(' '),        // http://tools.ietf.org/html/rfc5245#section-15.1
+                    addr = parts[4],
+                    type = parts[7];
+                if (type === 'host') updateDisplay(addr);
+            } else if (~line.indexOf("c=")) {       // http://tools.ietf.org/html/rfc4566#section-5.7
+                var parts = line.split(' '),
+                    addr = parts[2];
+                updateDisplay(addr);
+            }
+        });
+    }
+})();
+
+</script>
